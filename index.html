@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#15130f" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="読書ログ">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<title>読書ログ</title>
+<style>
+:root{
+  --bg:#f7f5f2; --card:#ffffff; --text:#1c1a17; --sub:#6f6a62;
+  --line:#e5e0d8; --accent:#8a5a2b; --accent-soft:#f0e6da;
+  --good:#3f7d52; --danger:#b4483c; --shadow:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#15130f; --card:#201d18; --text:#f0ece5; --sub:#9d968a;
+    --line:#332e26; --accent:#d9a066; --accent-soft:#2e261c;
+    --good:#7cb98d; --danger:#e08076; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.3);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  font-size:16px;line-height:1.6;
+  padding:0 0 calc(84px + env(safe-area-inset-bottom));
+  -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;
+}
+.wrap{max-width:640px;margin:0 auto;padding:0 max(16px, env(safe-area-inset-left)) 0 max(16px, env(safe-area-inset-right))}
+header{padding:calc(20px + env(safe-area-inset-top)) 0 8px;display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.tip{border-color:var(--accent);background:var(--accent-soft);font-size:14px;line-height:1.7}
+.tip b{display:block;font-size:15px;margin-bottom:4px}
+.tip p{margin:0}
+h1{font-size:19px;margin:0;letter-spacing:.04em;font-weight:700}
+h1 span{color:var(--accent)}
+.today{font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin:12px 0;box-shadow:var(--shadow)}
+.card h2{font-size:13px;margin:0 0 12px;color:var(--sub);font-weight:600;letter-spacing:.08em}
+button{font:inherit;color:inherit;cursor:pointer;border:none;background:none;touch-action:manipulation}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  background:var(--accent);color:#fff;border-radius:12px;padding:14px 20px;
+  font-weight:700;font-size:16px;width:100%;transition:transform .08s,opacity .15s;
+}
+.btn:active{transform:scale(.98)}
+.btn.ghost{background:transparent;color:var(--sub);border:1px solid var(--line);font-weight:600}
+.btn.danger{background:var(--danger)}
+.btn.sm{padding:9px 14px;font-size:14px;width:auto;border-radius:10px}
+.row{display:flex;gap:8px}
+.row>*{flex:1}
+
+/* --- 本チップ --- */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  display:flex;align-items:center;gap:8px;background:var(--accent-soft);
+  border:1px solid transparent;border-radius:999px;padding:10px 16px 10px 13px;
+  font-size:15px;font-weight:600;max-width:100%;transition:transform .08s;
+}
+.chip:active{transform:scale(.97)}
+.chip .ttl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:15em}
+.chip .play{color:var(--accent);font-size:12px}
+.chip.add{background:transparent;border:1px dashed var(--line);color:var(--sub)}
+.empty{color:var(--sub);font-size:14px;text-align:center;padding:22px 8px;line-height:1.8}
+
+/* --- タイマー --- */
+.timer-book{font-size:16px;font-weight:700;text-align:center;margin-bottom:2px}
+.timer-sub{font-size:12px;color:var(--sub);text-align:center;margin-bottom:14px}
+.clock{
+  font-size:clamp(46px,15vw,62px);font-weight:300;text-align:center;
+  font-variant-numeric:tabular-nums;letter-spacing:.02em;line-height:1.1;margin:6px 0 18px;
+}
+.clock.paused{opacity:.45}
+.pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--good);margin-right:6px;vertical-align:middle;animation:p 2s infinite}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* --- フォーム --- */
+label.f{display:block;font-size:12px;color:var(--sub);font-weight:600;margin:14px 0 6px;letter-spacing:.05em}
+input,textarea,select{
+  font:inherit;color:var(--text);background:var(--bg);width:100%;
+  border:1px solid var(--line);border-radius:10px;padding:12px;outline:none;
+}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:96px;line-height:1.7}
+.hint{font-size:12px;color:var(--sub);margin-top:6px}
+.stars{display:flex;gap:2px}
+.stars button{font-size:27px;line-height:1;color:var(--line);padding:2px 3px}
+.stars button.on{color:#e0a32e}
+.chk{display:flex;align-items:center;gap:10px;font-size:15px;margin-top:14px;cursor:pointer}
+.chk input{width:20px;height:20px;accent-color:var(--accent);flex:none}
+
+/* --- モーダル --- */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:60;padding:0}
+.modal[hidden]{display:none}
+.sheet{
+  background:var(--card);width:100%;max-width:640px;border-radius:20px 20px 0 0;
+  padding:20px 18px calc(24px + env(safe-area-inset-bottom));
+  max-height:92vh;overflow:auto;animation:up .22s ease-out;
+}
+@keyframes up{from{transform:translateY(18px);opacity:.4}}
+@media(min-width:641px){.modal{align-items:center}.sheet{border-radius:20px;max-height:86vh}}
+.sheet h3{margin:0 0 4px;font-size:18px}
+.sheet .sub{color:var(--sub);font-size:13px;margin:0 0 6px}
+
+/* --- リスト --- */
+.item{border-top:1px solid var(--line);padding:14px 0;display:flex;gap:12px;align-items:flex-start}
+.item:first-of-type{border-top:none}
+.item .body{flex:1;min-width:0}
+.item .t{font-weight:700;font-size:15px}
+.item .m{font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums}
+.item .memo{font-size:14px;margin-top:6px;white-space:pre-wrap;word-break:break-word;color:var(--text);opacity:.9}
+.badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.badge.done{background:transparent;border:1px solid var(--good);color:var(--good)}
+.link{color:var(--accent);font-size:13px;font-weight:600;padding:4px 0}
+
+/* --- 統計 --- */
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 10px;text-align:center}
+.kpi b{display:block;font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2}
+.kpi span{font-size:11px;color:var(--sub)}
+.bars{display:flex;align-items:flex-end;gap:3px;height:96px;margin-top:6px}
+.bars div{flex:1;background:var(--accent);border-radius:3px 3px 0 0;min-height:2px;opacity:.85}
+.bars div.z{background:var(--line)}
+.axis{display:flex;justify-content:space-between;font-size:11px;color:var(--sub);margin-top:6px}
+.heat{display:flex;gap:3px;overflow-x:auto;padding-bottom:4px}
+.heat .col{display:flex;flex-direction:column;gap:3px}
+.heat i{width:13px;height:13px;border-radius:3px;background:var(--line);display:block}
+.heat i[data-l="1"]{background:color-mix(in srgb,var(--accent) 30%,var(--line))}
+.heat i[data-l="2"]{background:color-mix(in srgb,var(--accent) 55%,var(--line))}
+.heat i[data-l="3"]{background:color-mix(in srgb,var(--accent) 78%,var(--line))}
+.heat i[data-l="4"]{background:var(--accent)}
+.legend{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--sub);margin-top:8px;justify-content:flex-end}
+.legend i{width:11px;height:11px;border-radius:3px;display:block}
+
+/* --- タブバー --- */
+nav{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;
+  background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);
+}
+nav .inner{max-width:640px;margin:0 auto;display:flex}
+nav button{flex:1;padding:9px 0 11px;font-size:11px;color:var(--sub);font-weight:600;display:flex;flex-direction:column;align-items:center;gap:3px}
+nav button em{font-style:normal;font-size:19px;line-height:1}
+nav button.on{color:var(--accent)}
+.toast{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom));
+  background:var(--text);color:var(--bg);padding:11px 18px;border-radius:999px;font-size:14px;font-weight:600;
+  z-index:80;box-shadow:var(--shadow);animation:up .2s;
+}
+.toast[hidden]{display:none}
+.search{margin-bottom:4px}
+.sec-title{font-size:12px;color:var(--sub);font-weight:700;letter-spacing:.08em;margin:22px 0 2px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>読書<span>ログ</span></h1>
+    <div class="today" id="todayLine"></div>
+  </header>
+
+  <!-- ===== 記録タブ ===== -->
+  <section id="tab-rec">
+    <div class="card tip" id="installTip" hidden>
+      <b>ホーム画面に追加して使ってください</b>
+      <p>共有ボタン（□に↑）→「ホーム画面に追加」で追加できます。Safariで記録したデータは、ホーム画面のアプリには引き継がれません。</p>
+      <button class="link" id="installTipClose">閉じる</button>
+    </div>
+    <div class="card" id="timerCard"></div>
+
+    <div class="card">
+      <h2>クイック記録</h2>
+      <div class="row">
+        <button class="btn ghost sm" id="btnManual">時間を手入力</button>
+        <button class="btn ghost sm" id="btnNewBook">＋ 本を追加</button>
+      </div>
+    </div>
+
+    <div class="sec-title">最近の記録</div>
+    <div class="card" id="recentList"></div>
+  </section>
+
+  <!-- ===== ライブラリタブ ===== -->
+  <section id="tab-lib" hidden>
+    <div class="card search">
+      <input id="q" type="search" placeholder="書名・感想を検索" autocomplete="off">
+    </div>
+    <div id="libList"></div>
+  </section>
+
+  <!-- ===== 統計タブ ===== -->
+  <section id="tab-stat" hidden>
+    <div class="kpis" id="kpis"></div>
+    <div class="card">
+      <h2>直近14日の読書時間</h2>
+      <div class="bars" id="bars"></div>
+      <div class="axis" id="barsAxis"></div>
+    </div>
+    <div class="card">
+      <h2>読書カレンダー（約4か月）</h2>
+      <div class="heat" id="heat"></div>
+      <div class="legend">少 <i style="background:var(--line)"></i><i data-l="1"></i><i data-l="2"></i><i data-l="3"></i><i data-l="4"></i> 多</div>
+    </div>
+    <div class="card">
+      <h2>よく読んだ本</h2>
+      <div id="topBooks"></div>
+    </div>
+    <div class="card">
+      <h2>データ</h2>
+      <div class="row">
+        <button class="btn ghost sm" id="btnCsv">⬇ CSV書き出し</button>
+        <button class="btn ghost sm" id="btnBackup">⬇ バックアップ</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn ghost sm" id="btnRestore">⬆ バックアップから復元</button>
+      </div>
+      <p class="hint">記録はこのiPhoneの中だけに保存されます。アプリを削除したり機種変更したりすると消えるので、ときどき「バックアップ」から「ファイルに保存」でiCloud Driveなどに保存してください。</p>
+    </div>
+  </section>
+</div>
+
+<nav><div class="inner">
+  <button data-tab="rec" class="on"><em>⏱</em>記録</button>
+  <button data-tab="lib"><em>📚</em>ライブラリ</button>
+  <button data-tab="stat"><em>📈</em>統計</button>
+</div></nav>
+
+<div class="modal" id="modal" hidden><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast" hidden></div>
+<input type="file" id="fileIn" accept="application/json,.json" hidden>
+
+<script>
+"use strict";
+/* ============ ストレージ ============ */
+const KEY = "reading-log-v1";
+const blank = { books:[], sessions:[], timer:null };
+let db = load();
+
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(!raw) return structuredClone(blank);
+    const d = JSON.parse(raw);
+    return { books:d.books||[], sessions:d.sessions||[], timer:d.timer||null };
+  }catch(e){ return structuredClone(blank); }
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(db)); }
+  catch(e){ toast("保存に失敗しました"); }
+}
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+
+/* ============ ユーティリティ ============ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s??"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = n => String(n).padStart(2,"0");
+const dayKey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const WD = ["日","月","火","水","木","金","土"];
+
+function fmtMin(m){
+  m = Math.round(m);
+  if(m < 60) return m + "分";
+  const h = Math.floor(m/60), r = m%60;
+  return r ? `${h}時間${r}分` : `${h}時間`;
+}
+function fmtClock(ms){
+  const t = Math.max(0, Math.floor(ms/1000));
+  const h = Math.floor(t/3600), m = Math.floor(t%3600/60), s = t%60;
+  return h ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+function relDate(iso){
+  const d = new Date(iso), now = new Date();
+  const diff = Math.floor((new Date(dayKey(now)) - new Date(dayKey(d))) / 86400000);
+  if(diff === 0) return "今日";
+  if(diff === 1) return "昨日";
+  if(diff < 7)  return `${diff}日前`;
+  return `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`;
+}
+function toast(msg){
+  const t = $("#toast");
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toast._id);
+  toast._id = setTimeout(()=> t.hidden = true, 2200);
+}
+const book = id => db.books.find(b => b.id === id);
+const bookTitle = id => book(id)?.title ?? "（削除された本）";
+
+/* ============ モーダル ============ */
+function openSheet(html){
+  $("#sheet").innerHTML = html;
+  $("#modal").hidden = false;
+  document.body.style.overflow = "hidden";
+}
+function closeSheet(){
+  $("#modal").hidden = true;
+  $("#sheet").innerHTML = "";
+  document.body.style.overflow = "";
+}
+$("#modal").addEventListener("click", e => { if(e.target.id === "modal") closeSheet(); });
+document.addEventListener("keydown", e => { if(e.key === "Escape" && !$("#modal").hidden) closeSheet(); });
+
+/* 星入力ウィジェット */
+function starsHTML(name, val){
+  let h = `<div class="stars" data-stars="${name}">`;
+  for(let i=1;i<=5;i++) h += `<button type="button" data-v="${i}" class="${i<=val?"on":""}">★</button>`;
+  h += `<button type="button" data-v="0" style="font-size:13px;color:var(--sub);align-self:center;margin-left:6px">クリア</button></div>`;
+  return h;
+}
+function bindStars(root){
+  root.querySelectorAll("[data-stars]").forEach(w => {
+    w.addEventListener("click", e => {
+      const b = e.target.closest("button"); if(!b) return;
+      const v = +b.dataset.v;
+      w.dataset.value = v;
+      w.querySelectorAll("button[data-v]").forEach(x => {
+        const xv = +x.dataset.v;
+        if(xv >= 1) x.classList.toggle("on", xv <= v);
+      });
+    });
+  });
+}
+const starVal = name => +($(`[data-stars="${name}"]`)?.dataset.value ?? 0);
+
+/* ============ タイマー ============ */
+let tick = null;
+
+function elapsed(){
+  const t = db.timer; if(!t) return 0;
+  return t.acc + (t.running ? Date.now() - t.since : 0);
+}
+function startTimer(bookId){
+  db.timer = { bookId, acc:0, since:Date.now(), running:true, startedAt:new Date().toISOString() };
+  save(); renderTimer(); toast("計測を開始しました");
+}
+function pauseTimer(){
+  const t = db.timer; if(!t || !t.running) return;
+  t.acc += Date.now() - t.since; t.running = false; save(); renderTimer();
+}
+function resumeTimer(){
+  const t = db.timer; if(!t || t.running) return;
+  t.since = Date.now(); t.running = true; save(); renderTimer();
+}
+function cancelTimer(){
+  db.timer = null; save(); renderTimer(); toast("破棄しました");
+}
+
+function renderTimer(){
+  const c = $("#timerCard");
+  clearInterval(tick); tick = null;
+
+  if(!db.timer){
+    const recent = recentBooks();
+    c.innerHTML = `
+      <h2>タップして計測スタート</h2>
+      ${recent.length ? `<div class="chips">
+        ${recent.map(b => `<button class="chip" data-start="${b.id}">
+            <span class="play">▶</span><span class="ttl">${esc(b.title)}</span></button>`).join("")}
+        <button class="chip add" data-newbook>＋ 新しい本</button>
+      </div>` : `<div class="empty">まだ本がありません。<br>「＋ 本を追加」から登録してください。<br>
+        <button class="link" data-restore>バックアップから復元する</button></div>`}`;
+    c.querySelector("[data-restore]")?.addEventListener("click", () => $("#fileIn").click());
+    c.querySelectorAll("[data-start]").forEach(el =>
+      el.addEventListener("click", () => startTimer(el.dataset.start)));
+    c.querySelector("[data-newbook]")?.addEventListener("click", newBookSheet);
+    return;
+  }
+
+  const t = db.timer;
+  c.innerHTML = `
+    <div class="timer-book">${esc(bookTitle(t.bookId))}</div>
+    <div class="timer-sub">${t.running ? '<span class="pulse"></span>読書中' : "一時停止中"}</div>
+    <div class="clock ${t.running?"":"paused"}" id="clock">${fmtClock(elapsed())}</div>
+    <button class="btn" id="btnFinish">読み終わった（記録する）</button>
+    <div class="row" style="margin-top:8px">
+      <button class="btn ghost sm" id="btnPause">${t.running ? "⏸ 一時停止" : "▶ 再開"}</button>
+      <button class="btn ghost sm" id="btnCancel">破棄</button>
+    </div>`;
+  $("#btnPause").onclick = () => t.running ? pauseTimer() : resumeTimer();
+  $("#btnCancel").onclick = () => { if(confirm("この計測を破棄しますか？")) cancelTimer(); };
+  $("#btnFinish").onclick = () => finishSheet();
+
+  if(t.running){
+    tick = setInterval(() => {
+      const el = $("#clock");
+      if(!el){ clearInterval(tick); return; }
+      el.textContent = fmtClock(elapsed());
+    }, 1000);
+  }
+}
+
+/* 読了にしていない本を、直近に読んだ順で返す */
+function activeBooks(limit){
+  const last = {};
+  db.sessions.forEach(s => { last[s.bookId] = Math.max(last[s.bookId]||0, new Date(s.start).getTime()); });
+  const list = db.books
+    .filter(b => !b.done)
+    .sort((a,b) => (last[b.id]||new Date(b.createdAt).getTime()) - (last[a.id]||new Date(a.createdAt).getTime()));
+  return limit ? list.slice(0,limit) : list;
+}
+const recentBooks = () => activeBooks(6);
+
+/* ============ 記録の保存シート ============ */
+function finishSheet(){
+  const t = db.timer; if(!t) return;
+  pauseTimer();
+  const mins = Math.max(1, Math.round(elapsed()/60000));
+  const b = book(t.bookId) || {};
+  openSheet(`
+    <h3>${esc(bookTitle(t.bookId))}</h3>
+    <p class="sub">感想は空のままでも保存できます。あとから追記もできます。</p>
+    <label class="f">読書時間（分）</label>
+    <input type="number" id="fMin" value="${mins}" min="1" inputmode="numeric">
+    <label class="f">感想・メモ（任意）</label>
+    <textarea id="fMemo" placeholder="心に残った一文、考えたこと など"></textarea>
+    <label class="f">読み終えたページ（任意・次回のしおり）</label>
+    <input type="number" id="fPage" inputmode="numeric" placeholder="${b.lastPage ? "前回 "+b.lastPage+"ページ" : "例：128"}">
+    <label class="f">この本の評価（任意）</label>
+    ${starsHTML("rate", b.rating||0)}
+    <label class="chk"><input type="checkbox" id="fDone" ${b.done?"checked":""}><span>読み終えた（読了にする）</span></label>
+    <div style="margin-top:20px"><button class="btn" id="fSave">保存する</button></div>
+    <div style="margin-top:8px"><button class="btn ghost sm" style="width:100%" onclick="closeSheet()">キャンセル</button></div>
+  `);
+  const w = $(`[data-stars="rate"]`); if(w) w.dataset.value = b.rating||0;
+  bindStars($("#sheet"));
+  $("#fSave").onclick = () => {
+    const m = Math.max(1, +$("#fMin").value || mins);
+    const page = $("#fPage").value.trim();
+    db.sessions.push({
+      id: uid(), bookId: t.bookId, start: t.startedAt,
+      minutes: m, memo: $("#fMemo").value.trim(),
+      page: page === "" ? null : +page
+    });
+    const bk = book(t.bookId);
+    if(bk){
+      const r = starVal("rate"); if(r) bk.rating = r; else delete bk.rating;
+      if(page !== "") bk.lastPage = +page;
+      bk.done = $("#fDone").checked;
+    }
+    db.timer = null; save(); closeSheet(); renderAll();
+    toast(`${fmtMin(m)}を記録しました`);
+  };
+}
+
+/* ============ 本の追加 ============ */
+function newBookSheet(){
+  openSheet(`
+    <h3>本を追加</h3>
+    <label class="f">書名（必須）</label>
+    <input id="nTitle" placeholder="例：夜と霧" autocomplete="off">
+    <label class="f">著者（任意）</label>
+    <input id="nAuthor" placeholder="例：V.E.フランクル" autocomplete="off">
+    <label class="chk"><input type="checkbox" id="nStart" checked><span>追加してすぐ計測をはじめる</span></label>
+    <div style="margin-top:20px"><button class="btn" id="nSave">追加する</button></div>
+    <div style="margin-top:8px"><button class="btn ghost sm" style="width:100%" onclick="closeSheet()">キャンセル</button></div>
+  `);
+  $("#nTitle").focus();
+  const submit = () => {
+    const title = $("#nTitle").value.trim();
+    if(!title){ toast("書名を入力してください"); return; }
+    const b = { id:uid(), title, author:$("#nAuthor").value.trim(), createdAt:new Date().toISOString(), done:false };
+    db.books.push(b);
+    const go = $("#nStart").checked;
+    save(); closeSheet();
+    if(go && !db.timer) startTimer(b.id); else { renderAll(); toast("追加しました"); }
+  };
+  $("#nSave").onclick = submit;
+  $("#nTitle").addEventListener("keydown", e => { if(e.key === "Enter") submit(); });
+}
+
+/* ============ 手入力 ============ */
+function manualSheet(){
+  const list = activeBooks();
+  if(!list.length){
+    toast(db.books.length ? "読書中の本がありません" : "先に本を追加してください");
+    newBookSheet(); return;
+  }
+  const now = new Date();
+  const local = `${dayKey(now)}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  openSheet(`
+    <h3>時間を手入力</h3>
+    <p class="sub">あとからまとめて記録するとき用です。</p>
+    <label class="f">本</label>
+    <select id="mBook">${list.map(b => `<option value="${b.id}">${esc(b.title)}</option>`).join("")}</select>
+    <label class="f">日時</label>
+    <input type="datetime-local" id="mWhen" value="${local}">
+    <label class="f">読書時間（分）</label>
+    <input type="number" id="mMin" value="30" min="1" inputmode="numeric">
+    <label class="f">感想・メモ（任意）</label>
+    <textarea id="mMemo"></textarea>
+    <div style="margin-top:20px"><button class="btn" id="mSave">保存する</button></div>
+    <div style="margin-top:8px"><button class="btn ghost sm" style="width:100%" onclick="closeSheet()">キャンセル</button></div>
+  `);
+  $("#mSave").onclick = () => {
+    const m = +$("#mMin").value;
+    if(!(m > 0)){ toast("時間を入力してください"); return; }
+    const w = $("#mWhen").value;
+    db.sessions.push({
+      id: uid(), bookId: $("#mBook").value,
+      start: (w ? new Date(w) : new Date()).toISOString(),
+      minutes: m, memo: $("#mMemo").value.trim(), page: null
+    });
+    save(); closeSheet(); renderAll(); toast(`${fmtMin(m)}を記録しました`);
+  };
+}
+
+/* ============ 感想の編集 ============ */
+function editSession(id){
+  const s = db.sessions.find(x => x.id === id); if(!s) return;
+  openSheet(`
+    <h3>記録を編集</h3>
+    <p class="sub">${esc(bookTitle(s.bookId))}・${esc(relDate(s.start))}</p>
+    <label class="f">読書時間（分）</label>
+    <input type="number" id="eMin" value="${s.minutes}" min="1" inputmode="numeric">
+    <label class="f">感想・メモ</label>
+    <textarea id="eMemo" placeholder="あとから思い出したことも書き足せます">${esc(s.memo||"")}</textarea>
+    <div style="margin-top:20px"><button class="btn" id="eSave">保存する</button></div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn ghost sm" onclick="closeSheet()">キャンセル</button>
+      <button class="btn ghost sm" id="eDel" style="color:var(--danger)">この記録を削除</button>
+    </div>
+  `);
+  $("#eSave").onclick = () => {
+    s.minutes = Math.max(1, +$("#eMin").value || s.minutes);
+    s.memo = $("#eMemo").value.trim();
+    save(); closeSheet(); renderAll(); toast("保存しました");
+  };
+  $("#eDel").onclick = () => {
+    if(!confirm("この記録を削除しますか？")) return;
+    db.sessions = db.sessions.filter(x => x.id !== id);
+    save(); closeSheet(); renderAll(); toast("削除しました");
+  };
+}
+
+/* ============ 本の詳細 ============ */
+function bookSheet(id){
+  const b = book(id); if(!b) return;
+  const ss = db.sessions.filter(s => s.bookId === id).sort((x,y) => new Date(y.start) - new Date(x.start));
+  const total = ss.reduce((a,s) => a + s.minutes, 0);
+  openSheet(`
+    <h3>${esc(b.title)}</h3>
+    <p class="sub">${ss.length}回 / 合計 ${fmtMin(total)}</p>
+    <label class="f">書名</label>
+    <input id="bTitle" value="${esc(b.title)}" autocomplete="off">
+    <label class="f">著者</label>
+    <input id="bAuthor" value="${esc(b.author||"")}" placeholder="未入力" autocomplete="off">
+    <label class="f">しおり（読み終えたページ）</label>
+    <input type="number" id="bPage" value="${b.lastPage ?? ""}" inputmode="numeric" placeholder="未入力">
+    <label class="f">評価</label>
+    ${starsHTML("brate", b.rating||0)}
+    <label class="chk"><input type="checkbox" id="bDone" ${b.done?"checked":""}><span>読了にする</span></label>
+    <div style="margin-top:18px"><button class="btn" id="bSave">保存</button></div>
+    <div class="row" style="margin-top:8px">
+      ${db.timer ? "" : `<button class="btn ghost sm" id="bStart">▶ この本を読む</button>`}
+      <button class="btn ghost sm" id="bDel" style="color:var(--danger)">本を削除</button>
+    </div>
+    <label class="f" style="margin-top:22px">記録と感想</label>
+    ${ss.length ? ss.map(s => `
+      <div class="item"><div class="body">
+        <div class="m">${esc(relDate(s.start))}・${esc(fmtMin(s.minutes))}${s.page?"・"+s.page+"ページまで":""}</div>
+        ${s.memo ? `<div class="memo">${esc(s.memo)}</div>` : `<div class="memo" style="color:var(--sub)">（感想なし）</div>`}
+        <button class="link" data-edit="${s.id}">編集</button>
+      </div></div>`).join("") : `<div class="empty">まだ記録がありません</div>`}
+  `);
+  const w = $(`[data-stars="brate"]`); if(w) w.dataset.value = b.rating||0;
+  bindStars($("#sheet"));
+  $("#sheet").querySelectorAll("[data-edit]").forEach(el =>
+    el.addEventListener("click", () => editSession(el.dataset.edit)));
+  $("#bSave").onclick = () => {
+    const title = $("#bTitle").value.trim();
+    if(!title){ toast("書名は空にできません"); $("#bTitle").focus(); return; }
+    b.title = title;
+    b.author = $("#bAuthor").value.trim();
+    const page = $("#bPage").value.trim();
+    if(page === "") delete b.lastPage; else b.lastPage = +page;
+    const r = starVal("brate"); if(r) b.rating = r; else delete b.rating;
+    b.done = $("#bDone").checked;
+    save(); closeSheet(); renderAll(); toast("保存しました");
+  };
+  $("#bStart")?.addEventListener("click", () => { closeSheet(); startTimer(id); switchTab("rec"); });
+  $("#bDel").onclick = () => {
+    if(!confirm(`「${b.title}」と、その${ss.length}件の記録をすべて削除します。よろしいですか？`)) return;
+    db.books = db.books.filter(x => x.id !== id);
+    db.sessions = db.sessions.filter(s => s.bookId !== id);
+    if(db.timer?.bookId === id) db.timer = null;
+    save(); closeSheet(); renderAll(); toast("削除しました");
+  };
+}
+
+/* ============ 一覧の描画 ============ */
+function renderRecent(){
+  const ss = [...db.sessions].sort((a,b) => new Date(b.start) - new Date(a.start)).slice(0,8);
+  const c = $("#recentList");
+  if(!ss.length){ c.innerHTML = `<div class="empty">記録がここに並びます。<br>まずは本を追加して、読み始めにタップ。</div>`; return; }
+  c.innerHTML = ss.map(s => `
+    <div class="item"><div class="body">
+      <div class="t">${esc(bookTitle(s.bookId))}</div>
+      <div class="m">${esc(relDate(s.start))}・${esc(fmtMin(s.minutes))}</div>
+      ${s.memo ? `<div class="memo">${esc(s.memo)}</div>` : ""}
+      <button class="link" data-edit="${s.id}">${s.memo ? "編集" : "＋ 感想を書く"}</button>
+    </div></div>`).join("");
+  c.querySelectorAll("[data-edit]").forEach(el =>
+    el.addEventListener("click", () => editSession(el.dataset.edit)));
+}
+
+function renderLib(){
+  const q = $("#q").value.trim().toLowerCase();
+  const c = $("#libList");
+  let books = db.books.map(b => {
+    const ss = db.sessions.filter(s => s.bookId === b.id);
+    return { b, total: ss.reduce((a,s)=>a+s.minutes,0), n: ss.length,
+             last: ss.length ? Math.max(...ss.map(s=>new Date(s.start).getTime())) : new Date(b.createdAt).getTime(),
+             memos: ss.filter(s=>s.memo).map(s=>s.memo) };
+  });
+  if(q) books = books.filter(x =>
+    x.b.title.toLowerCase().includes(q) ||
+    (x.b.author||"").toLowerCase().includes(q) ||
+    x.memos.some(m => m.toLowerCase().includes(q)));
+  books.sort((a,b) => b.last - a.last);
+
+  if(!books.length){ c.innerHTML = `<div class="card"><div class="empty">${q ? "該当する本はありません" : "まだ本がありません"}</div></div>`; return; }
+  c.innerHTML = `<div class="card">` + books.map(x => `
+    <div class="item" data-book="${x.b.id}" style="cursor:pointer">
+      <div class="body">
+        <div class="t">${esc(x.b.title)} ${x.b.rating ? `<span style="color:#e0a32e;font-size:13px">${"★".repeat(x.b.rating)}</span>` : ""}</div>
+        <div class="m">${x.b.author ? esc(x.b.author)+"・" : ""}${fmtMin(x.total)} / ${x.n}回${x.b.lastPage ? " ・ "+x.b.lastPage+"ページまで" : ""}</div>
+        ${q && x.memos.length ? `<div class="memo">${esc(x.memos.find(m=>m.toLowerCase().includes(q))||"")}</div>` : ""}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none">
+        <span class="badge ${x.b.done?"done":""}">${x.b.done ? "読了" : "読書中"}</span>
+        <span style="color:var(--accent);font-size:12px;font-weight:600">編集 ›</span>
+      </div>
+    </div>`).join("") + `</div>`;
+  c.querySelectorAll("[data-book]").forEach(el =>
+    el.addEventListener("click", () => bookSheet(el.dataset.book)));
+}
+
+/* ============ 統計 ============ */
+function minutesByDay(){
+  const map = {};
+  db.sessions.forEach(s => {
+    const k = dayKey(new Date(s.start));
+    map[k] = (map[k]||0) + s.minutes;
+  });
+  return map;
+}
+function renderStat(){
+  const map = minutesByDay(), now = new Date();
+  const sum = days => {
+    let t = 0;
+    for(let i=0;i<days;i++){
+      const d = new Date(now); d.setDate(d.getDate()-i);
+      t += map[dayKey(d)] || 0;
+    }
+    return t;
+  };
+  const doneCnt = db.books.filter(b => b.done).length;
+  const total = db.sessions.reduce((a,s)=>a+s.minutes,0);
+  const days = Object.keys(map).length;
+
+  $("#kpis").innerHTML = `
+    <div class="kpi"><b>${fmtMin(sum(7)).replace("時間","<small style='font-size:13px'>時間</small>").replace("分","<small style='font-size:13px'>分</small>")}</b><span>直近7日</span></div>
+    <div class="kpi"><b>${fmtMin(sum(30)).replace("時間","<small style='font-size:13px'>時間</small>").replace("分","<small style='font-size:13px'>分</small>")}</b><span>直近30日</span></div>
+    <div class="kpi"><b>${doneCnt}<small style="font-size:13px">冊</small></b><span>読了</span></div>
+    <div class="kpi"><b>${streak()}<small style="font-size:13px">日</small></b><span>連続記録</span></div>
+    <div class="kpi"><b>${days}<small style="font-size:13px">日</small></b><span>読んだ日数</span></div>
+    <div class="kpi"><b>${fmtMin(total).replace("時間","<small style='font-size:13px'>時間</small>").replace("分","<small style='font-size:13px'>分</small>")}</b><span>累計</span></div>`;
+
+  // 棒グラフ（直近14日）
+  const arr = [];
+  for(let i=13;i>=0;i--){
+    const d = new Date(now); d.setDate(d.getDate()-i);
+    arr.push({ d, m: map[dayKey(d)] || 0 });
+  }
+  const max = Math.max(30, ...arr.map(x=>x.m));
+  $("#bars").innerHTML = arr.map(x =>
+    `<div class="${x.m?"":"z"}" style="height:${Math.max(2, x.m/max*100)}%" title="${x.d.getMonth()+1}/${x.d.getDate()} ${fmtMin(x.m)}"></div>`).join("");
+  $("#barsAxis").innerHTML = `<span>${arr[0].d.getMonth()+1}/${arr[0].d.getDate()}</span><span>最大 ${fmtMin(max)}</span><span>今日</span>`;
+
+  // ヒートマップ（約17週）
+  const end = new Date(now); end.setDate(end.getDate() + (6 - end.getDay()));
+  let cols = "";
+  for(let w=16;w>=0;w--){
+    cols += `<div class="col">`;
+    for(let d=0;d<7;d++){
+      const day = new Date(end); day.setDate(day.getDate() - (w*7) - (6-d));
+      const m = map[dayKey(day)] || 0;
+      const l = m===0?0 : m<20?1 : m<45?2 : m<90?3 : 4;
+      cols += `<i ${l?`data-l="${l}"`:""} title="${day.getMonth()+1}/${day.getDate()} ${fmtMin(m)}"></i>`;
+    }
+    cols += `</div>`;
+  }
+  $("#heat").innerHTML = cols;
+  $("#heat").scrollLeft = 9999;
+
+  // よく読んだ本
+  const per = {};
+  db.sessions.forEach(s => per[s.bookId] = (per[s.bookId]||0) + s.minutes);
+  const top = Object.entries(per).sort((a,b) => b[1]-a[1]).slice(0,5);
+  $("#topBooks").innerHTML = top.length ? top.map(([id,m]) => `
+    <div class="item"><div class="body">
+      <div class="t">${esc(bookTitle(id))}</div>
+      <div class="m">${fmtMin(m)}</div>
+      <div style="height:5px;background:var(--line);border-radius:3px;margin-top:6px">
+        <div style="height:5px;width:${m/top[0][1]*100}%;background:var(--accent);border-radius:3px"></div></div>
+    </div></div>`).join("") : `<div class="empty">まだ記録がありません</div>`;
+}
+function streak(){
+  const map = minutesByDay(), d = new Date();
+  if(!map[dayKey(d)]) d.setDate(d.getDate()-1); // 今日まだでも昨日まで続いていればカウント
+  let n = 0;
+  while(map[dayKey(d)]){ n++; d.setDate(d.getDate()-1); }
+  return n;
+}
+
+/* ============ CSV / バックアップ ============ */
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+              (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const isStandalone = navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+
+/* iPhoneでは共有シート（ファイルに保存・AirDrop など）、それ以外は通常のダウンロード。
+   保存しなかった（共有シートを閉じた）ときは false */
+async function download(name, text, mime){
+  const file = new File([text], name, {type:mime});
+  if(isIOS && navigator.canShare?.({files:[file]})){
+    try{ await navigator.share({files:[file]}); return true; }
+    catch(e){ if(e.name === "AbortError") return false; }
+  }
+  const url = URL.createObjectURL(file);
+  const a = document.createElement("a");
+  a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return true;
+}
+async function exportCsv(){
+  if(!db.sessions.length){ toast("記録がありません"); return; }
+  const q = v => `"${String(v??"").replace(/"/g,'""')}"`;
+  const head = ["日付","開始時刻","書名","著者","分","ページ","評価","読了","感想"];
+  const rows = [...db.sessions].sort((a,b)=>new Date(a.start)-new Date(b.start)).map(s => {
+    const d = new Date(s.start), b = book(s.bookId) || {};
+    return [dayKey(d), `${pad(d.getHours())}:${pad(d.getMinutes())}`, b.title||"", b.author||"",
+            s.minutes, s.page ?? "", b.rating ?? "", b.done ? "済" : "", s.memo||""].map(q).join(",");
+  });
+  if(await download(`読書ログ_${dayKey(new Date())}.csv`, "﻿" + [head.map(q).join(","), ...rows].join("\r\n"), "text/csv;charset=utf-8"))
+    toast("CSVを書き出しました");
+}
+async function backup(){
+  if(await download(`読書ログ_backup_${dayKey(new Date())}.json`, JSON.stringify(db), "application/json"))
+    toast("バックアップを保存しました");
+}
+$("#fileIn").addEventListener("change", e => {
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      const d = JSON.parse(r.result);
+      if(!Array.isArray(d.books) || !Array.isArray(d.sessions)) throw 0;
+      if(!confirm(`本 ${d.books.length}冊 / 記録 ${d.sessions.length}件 を読み込みます。\n現在のデータは置き換わります。よろしいですか？`)) return;
+      db = { books:d.books, sessions:d.sessions, timer:d.timer||null };
+      save(); renderAll(); toast("復元しました");
+    }catch(err){ toast("ファイルを読み込めませんでした"); }
+    finally{ e.target.value = ""; }
+  };
+  r.readAsText(f);
+});
+
+/* ============ タブ ============ */
+function switchTab(name){
+  ["rec","lib","stat"].forEach(t => $("#tab-"+t).hidden = (t !== name));
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === name));
+  window.scrollTo(0,0);
+  if(name === "stat") renderStat();
+  if(name === "lib") renderLib();
+}
+document.querySelectorAll("nav button").forEach(b =>
+  b.addEventListener("click", () => switchTab(b.dataset.tab)));
+
+/* ============ 起動 ============ */
+function renderAll(){
+  renderTimer(); renderRecent();
+  if(!$("#tab-lib").hidden) renderLib();
+  if(!$("#tab-stat").hidden) renderStat();
+  const n = new Date();
+  const m = minutesByDay()[dayKey(n)] || 0;
+  $("#todayLine").textContent = `${n.getMonth()+1}/${n.getDate()}(${WD[n.getDay()]})　今日 ${fmtMin(m)}`;
+}
+$("#btnManual").onclick = manualSheet;
+$("#btnNewBook").onclick = newBookSheet;
+$("#btnCsv").onclick = exportCsv;
+$("#btnBackup").onclick = backup;
+$("#btnRestore").onclick = () => $("#fileIn").click();
+$("#q").addEventListener("input", renderLib);
+window.closeSheet = closeSheet;
+document.addEventListener("visibilitychange", () => { if(!document.hidden) renderTimer(); });
+
+/* iPhoneのSafariで開いているときだけ「ホーム画面に追加」を案内する（保存場所が別になるため） */
+let tipClosed = false;
+try{ tipClosed = sessionStorage.getItem("installTipClosed") === "1"; }catch(e){}
+$("#installTip").hidden = !(isIOS && !isStandalone && !tipClosed);
+$("#installTipClose").onclick = () => {
+  $("#installTip").hidden = true;
+  try{ sessionStorage.setItem("installTipClosed", "1"); }catch(e){}
+};
+
+/* 圏外でも開けるようにする（file:// で開いたときは対象外） */
+if("serviceWorker" in navigator && location.protocol.startsWith("http"))
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+/* 空き容量が減っても記録を消さないようブラウザに依頼する */
+if(navigator.storage?.persist) navigator.storage.persist().catch(() => {});
+
+renderAll();
+</script>
+</body>
+</html>
