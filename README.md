@@ -5,9 +5,9 @@
 
 ## iPhoneでの使い始め方
 
-> **公開URLはまだありません。** GitHub Pagesに置いたあと、ここに追記します。
+**公開URL：https://tabashow.github.io/reading-log/**
 
-1. iPhoneの**Safari**で公開URLを開く
+1. iPhoneの**Safari**で上のURLを開く
 2. 共有ボタン（□に↑）→ **「ホーム画面に追加」**
 3. **ホーム画面のアイコンから**アプリを開いて使う
 
